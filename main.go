@@ -19,23 +19,25 @@ func contentTypeApplicationJsonMiddleware(next http.Handler) http.Handler {
 
 func main() {
 	db := db.NewDb()
-	customerModel := &models.Customer{}
-
 	// Seed the database with 3 records
-	db.Seed(3, customerModel)
+	db.Seed(3, &models.Customer{})
 
-	controller := controllers.NewCustomerController(db)
+	customerController := controllers.NewCustomerController(db)
+	homeController := controllers.NewHomeController(db)
+
+	r := mux.NewRouter()
+	r.HandleFunc("/", homeController.Index).Methods("GET")
 
 	// Register the handlers for the CustomerController
-	r := mux.NewRouter()
-	r.HandleFunc("/customers", controller.Index).Methods("GET")
-	r.HandleFunc("/customers/{id}", controller.Show).Methods("GET")
-	r.HandleFunc("/customers/{id}", controller.Delete).Methods("DELETE")
-	r.HandleFunc("/customers", controller.Store).Methods("POST")
-	r.HandleFunc("/customers/{id}", controller.Update).Methods("PATCH")
+	customerRouter := r.PathPrefix("/customers").Subrouter()
+	customerRouter.HandleFunc("", customerController.Index).Methods("GET")
+	customerRouter.HandleFunc("/{id}", customerController.Show).Methods("GET")
+	customerRouter.HandleFunc("/{id}", customerController.Delete).Methods("DELETE")
+	customerRouter.HandleFunc("", customerController.Store).Methods("POST")
+	customerRouter.HandleFunc("/{id}", customerController.Update).Methods("PATCH")
 
 	// Automatically add the response json header to all requests
-	r.Use(contentTypeApplicationJsonMiddleware)
+	customerRouter.Use(contentTypeApplicationJsonMiddleware)
 
 	// Start the web server on port 8080
 	http.ListenAndServe(":8080", r)
